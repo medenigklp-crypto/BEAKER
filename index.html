@@ -1,0 +1,996 @@
+
+# BEAKER - Gelişmiş Kimya Laboratuvar Simülasyonu
+# Tek parça HTML dosyası olarak kaydediyorum
+
+html_kodu = '''<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BEAKER - Gelişmiş Kimya Laboratuvarı</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0f0f14;
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #ust-panel {
+            background: #1e1e28;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #00ffc8;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        #baslik { color: #00ffc8; font-size: 1.4em; font-weight: bold; }
+        .bilgi-grup { display: flex; gap: 20px; align-items: center; }
+        .bilgi-item { display: flex; align-items: center; gap: 5px; }
+        .bilgi-etiket { color: #888; font-size: 0.85em; }
+        .bilgi-deger { font-weight: bold; font-size: 1.1em; }
+        #sicaklik-deger { color: #ff6b6b; }
+        #ph-deger { color: #00ff64; }
+        #hacim-deger { color: #64b5f6; }
+        #ana-icerik { display: flex; flex: 1; overflow: hidden; }
+        #beher-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: #0f0f14;
+        }
+        #beher-canvas { max-width: 100%; max-height: 100%; }
+        #sag-panel {
+            width: 220px;
+            background: #1e1e28;
+            border-left: 2px solid #00ffc8;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        #tarihce-baslik { color: #00ffc8; font-size: 1.1em; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        #tarihce-liste { flex: 1; overflow-y: auto; font-size: 0.8em; }
+        .tarihce-item { padding: 4px 0; border-bottom: 1px solid #333; color: #ccc; }
+        .tarihce-item.yeni { color: #00ffc8; animation: parla 1s ease-out; }
+        @keyframes parla { from { color: #fff; text-shadow: 0 0 10px #00ffc8; } to { color: #00ffc8; } }
+        #alt-panel {
+            background: #1e1e28;
+            padding: 10px;
+            border-top: 2px solid #00ffc8;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .kategori-sekmeler { display: flex; gap: 5px; margin-bottom: 10px; }
+        .sekme {
+            padding: 8px 16px;
+            background: #2a2a3a;
+            border: 1px solid #444;
+            border-radius: 5px 5px 0 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+        .sekme.aktif { background: #00b896; color: #fff; border-color: #00ffc8; }
+        .sekme:hover { background: #3a3a4a; }
+        .buton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 5px; }
+        .buton {
+            padding: 8px 5px;
+            border: 1px solid #444;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 0.85em;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .buton:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,255,200,0.2); }
+        .buton:active { transform: translateY(0); }
+        .buton.element { background: rgba(255,255,255,0.1); color: #fff; }
+        .buton.bilesik { background: rgba(100,150,255,0.15); color: #fff; }
+        .buton.aksiyon { background: #2a2a3a; color: #00ffc8; border-color: #00ffc8; }
+        .buton.aksiyon:hover { background: #00b896; color: #fff; }
+        .buton.renk-gosterge { width: 100%; height: 3px; position: absolute; bottom: 0; left: 0; }
+        .miktar-kontrol { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 5px; background: #2a2a3a; border-radius: 5px; }
+        .miktar-kontrol label { color: #888; font-size: 0.9em; }
+        #miktar-slider { flex: 1; }
+        #miktar-deger { color: #00ffc8; font-weight: bold; min-width: 30px; }
+        .ozellestirme-panel { display: none; padding: 10px; background: #2a2a3a; border-radius: 5px; margin-top: 10px; }
+        .ozellestirme-panel.acik { display: block; }
+        .renk-secici { display: flex; gap: 5px; flex-wrap: wrap; }
+        .renk-kutu { width: 30px; height: 30px; border-radius: 5px; cursor: pointer; border: 2px solid transparent; }
+        .renk-kutu:hover { border-color: #fff; transform: scale(1.1); }
+        .renk-kutu.secili { border-color: #00ffc8; }
+        #ozellestirme-buton { margin-left: auto; padding: 5px 10px; background: #2a2a3a; border: 1px solid #00ffc8; color: #00ffc8; border-radius: 5px; cursor: pointer; }
+        #aktif-bilgi { margin-top: 10px; padding: 10px; background: #2a2a3a; border-radius: 5px; font-size: 0.85em; }
+        #aktif-bilgi h4 { color: #00ffc8; margin-bottom: 5px; }
+        .bilgi-satir { display: flex; justify-content: space-between; padding: 2px 0; }
+        .scroll-container { max-height: 150px; overflow-y: auto; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e1e28; }
+        ::-webkit-scrollbar-thumb { background: #00ffc8; border-radius: 3px; }
+        
+        @media (max-width: 768px) {
+            #sag-panel { width: 150px; }
+            .buton-grid { grid-template-columns: repeat(4, 1fr); }
+            #ust-panel { font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div id="ust-panel">
+        <div id="baslik">BEAKER</div>
+        <div class="bilgi-grup">
+            <div class="bilgi-item">
+                <span class="bilgi-etiket">Sicaklik:</span>
+                <span class="bilgi-deger" id="sicaklik-deger">25.0C</span>
+            </div>
+            <div class="bilgi-item">
+                <span class="bilgi-etiket">pH:</span>
+                <span class="bilgi-deger" id="ph-deger">7.0</span>
+            </div>
+            <div class="bilgi-item">
+                <span class="bilgi-etiket">Hacim:</span>
+                <span class="bilgi-deger" id="hacim-deger">0.0 ml</span>
+            </div>
+        </div>
+        <button id="ozellestirme-buton" onclick="ozellestirmeToggle()">Renk</button>
+    </div>
+    
+    <div id="ana-icerik">
+        <div id="beher-container">
+            <canvas id="beher-canvas" width="500" height="600"></canvas>
+        </div>
+        <div id="sag-panel">
+            <div id="tarihce-baslik">Tarihce</div>
+            <div id="tarihce-liste"></div>
+        </div>
+    </div>
+    
+    <div id="alt-panel">
+        <div class="miktar-kontrol">
+            <label>Miktar:</label>
+            <input type="range" id="miktar-slider" min="1" max="50" value="10" oninput="miktarGuncelle(this.value)">
+            <span id="miktar-deger">10</span>
+        </div>
+        
+        <div class="ozellestirme-panel" id="ozellestirme-panel">
+            <h4 style="color:#00ffc8;margin-bottom:8px;">Renk Ozellestirme</h4>
+            <div class="renk-secici" id="renk-secici"></div>
+        </div>
+        
+        <div class="kategori-sekmeler">
+            <div class="sekme aktif" onclick="kategoriDegistir('elementler', this)">Elementler</div>
+            <div class="sekme" onclick="kategoriDegistir('bilesikler', this)">Bilesikler</div>
+            <div class="sekme" onclick="kategoriDegistir('aksiyonlar', this)">Aksiyonlar</div>
+        </div>
+        
+        <div id="buton-alani">
+            <div class="buton-grid" id="elementler-grid"></div>
+            <div class="buton-grid" id="bilesikler-grid" style="display:none;"></div>
+            <div class="buton-grid" id="aksiyonlar-grid" style="display:none;"></div>
+        </div>
+        
+        <div id="aktif-bilgi">
+            <h4>Aktif Bilgi</h4>
+            <div id="aktif-bilgi-icerik">Bir element veya bilesik secin...</div>
+        </div>
+    </div>
+
+<script>
+const ELEMENTLER = {
+    "H": {ad: "Hidrojen", renk: "#ffffff", tip: "gaz", atomNo: 1, yogunluk: 0.09, aciklama: "Evrendeki en hafif element"},
+    "O": {ad: "Oksijen", renk: "#ff5050", tip: "gaz", atomNo: 8, yogunluk: 1.43, aciklama: "Solunum icin gerekli"},
+    "N": {ad: "Azot", renk: "#5050ff", tip: "gaz", atomNo: 7, yogunluk: 1.25, aciklama: "Atmosferin %78'i"},
+    "C": {ad: "Karbon", renk: "#323232", tip: "katı", atomNo: 6, yogunluk: 2.27, aciklama: "Yasamin temeli"},
+    "Na": {ad: "Sodyum", renk: "#ffc864", tip: "katı", atomNo: 11, yogunluk: 0.97, aciklama: "Tuzun ana bileseni"},
+    "Cl": {ad: "Klor", renk: "#32ff32", tip: "gaz", atomNo: 17, yogunluk: 3.21, aciklama: "Dezenfektan"},
+    "Fe": {ad: "Demir", renk: "#b48c64", tip: "katı", atomNo: 26, yogunluk: 7.87, aciklama: "Yapi malzemesi"},
+    "Cu": {ad: "Bakir", renk: "#c87832", tip: "katı", atomNo: 29, yogunluk: 8.96, aciklama: "Iletken"},
+    "Au": {ad: "Altin", renk: "#ffd700", tip: "katı", atomNo: 79, yogunluk: 19.32, aciklama: "Degerli metal"},
+    "Ag": {ad: "Gumus", renk: "#dcdcf0", tip: "katı", atomNo: 47, yogunluk: 10.49, aciklama: "Taki ve iletken"},
+    "S": {ad: "Kukurt", renk: "#ffff64", tip: "katı", atomNo: 16, yogunluk: 2.07, aciklama: "Asit yagmuru"},
+    "Ca": {ad: "Kalsiyum", renk: "#f0f0f0", tip: "katı", atomNo: 20, yogunluk: 1.55, aciklama: "Kemiklerde bulunur"},
+    "Mg": {ad: "Magnezyum", renk: "#c8c8d2", tip: "katı", atomNo: 12, yogunluk: 1.74, aciklama: "Hafif metal"},
+    "Al": {ad: "Aluminyum", renk: "#c8c8d2", tip: "katı", atomNo: 13, yogunluk: 2.70, aciklama: "Hafif ve dayanikli"},
+    "K": {ad: "Potasyum", renk: "#c8c8dc", tip: "katı", atomNo: 19, yogunluk: 0.86, aciklama: "Muzda bulunur"},
+    "Zn": {ad: "Cinko", renk: "#b4b4be", tip: "katı", atomNo: 30, yogunluk: 7.14, aciklama: "Kaplama metal"},
+    "Pb": {ad: "Kursun", renk: "#64646e", tip: "katı", atomNo: 82, yogunluk: 11.34, aciklama: "Agir metal"},
+    "Hg": {ad: "Civa", renk: "#c8c8c8", tip: "sıvı", atomNo: 80, yogunluk: 13.53, aciklama: "Tek sivi metal"},
+    "He": {ad: "Helyum", renk: "#ffffc8", tip: "gaz", atomNo: 2, yogunluk: 0.18, aciklama: "Balon gazi"},
+    "Ne": {ad: "Neon", renk: "#ff9696", tip: "gaz", atomNo: 10, yogunluk: 0.90, aciklama: "Neon tabela"},
+};
+
+const BILESIKLER = {
+    "H2O": {ad: "Su", formul: "H2O", renk: "#0096ff", tip: "sıvı", ph: 7.0, aciklama: "Yasamin kaynagi"},
+    "CO2": {ad: "Karbondioksit", formul: "CO2", renk: "#c8c8c8", tip: "gaz", ph: 5.6, aciklama: "Seragazi"},
+    "NaCl": {ad: "Sodyum Klorur", formul: "NaCl", renk: "#ffffff", tip: "katı", ph: 7.0, aciklama: "Yemek tuzu"},
+    "HCl": {ad: "Hidroklorik Asit", formul: "HCl", renk: "#ffc8c8", tip: "sıvı", ph: 1.0, aciklama: "Mide asidi"},
+    "NaOH": {ad: "Sodyum Hidroksit", formul: "NaOH", renk: "#c8c8ff", tip: "sıvı", ph: 13.0, aciklama: "Guclu baz"},
+    "H2SO4": {ad: "Kukurt Asidi", formul: "H2SO4", renk: "#ffdcb4", tip: "sıvı", ph: 0.5, aciklama: "Pil asidi"},
+    "CaCO3": {ad: "Kalsiyum Karbonat", formul: "CaCO3", renk: "#f0f0f0", tip: "katı", ph: 9.0, aciklama: "Kirec tasi"},
+    "Fe2O3": {ad: "Demir Oksit", formul: "Fe2O3", renk: "#b43c1e", tip: "katı", ph: 7.0, aciklama: "Pas"},
+    "CuSO4": {ad: "Bakir Sulfat", formul: "CuSO4", renk: "#0064c8", tip: "sıvı", ph: 5.0, aciklama: "Mavi tas"},
+    "NH3": {ad: "Amonyak", formul: "NH3", renk: "#c8ffc8", tip: "gaz", ph: 11.0, aciklama: "Temizlik urunu"},
+    "CH4": {ad: "Metan", formul: "CH4", renk: "#c8c8c8", tip: "gaz", ph: 7.0, aciklama: "Dogal gaz"},
+    "C2H5OH": {ad: "Etanol", formul: "C2H5OH", renk: "#c8ffff", tip: "sıvı", ph: 7.0, aciklama: "Alkol"},
+    "H2O2": {ad: "Hidrojen Peroksit", formul: "H2O2", renk: "#dcdcff", tip: "sıvı", ph: 4.5, aciklama: "Dezenfektan"},
+    "KMnO4": {ad: "Potasyum Permanganat", formul: "KMnO4", renk: "#960096", tip: "sıvı", ph: 7.0, aciklama: "Mor kristal"},
+    "AgNO3": {ad: "Gumus Nitrat", formul: "AgNO3", renk: "#dcdcf0", tip: "sıvı", ph: 5.5, aciklama: "Fotografcilik"},
+    "BaCl2": {ad: "Baryum Klorur", formul: "BaCl2", renk: "#f0f0ff", tip: "sıvı", ph: 7.0, aciklama: "Test reaktifi"},
+    "MgSO4": {ad: "Magnezyum Sulfat", formul: "MgSO4", renk: "#ffffff", tip: "sıvı", ph: 6.5, aciklama: "Epsom tuzu"},
+    "Al2O3": {ad: "Aluminyum Oksit", formul: "Al2O3", renk: "#f0f0f0", tip: "katı", ph: 8.0, aciklama: "Korundum"},
+    "ZnCl2": {ad: "Cinko Klorur", formul: "ZnCl2", renk: "#ffffff", tip: "sıvı", ph: 4.0, aciklama: "Lehim"},
+};
+
+const REAKSIYONLAR = {
+    "H+O": {urun: "H2O", tip: "patlama", sicaklik: 100, renk: "#0096ff", aciklama: "Su olusumu!"},
+    "C+O": {urun: "CO2", tip: "yanma", sicaklik: 200, renk: "#c8c8c8", aciklama: "Yanma reaksiyonu!"},
+    "Na+Cl": {urun: "NaCl", tip: "birlesme", sicaklik: 50, renk: "#ffffff", aciklama: "Tuz olusumu!"},
+    "Fe+O": {urun: "Fe2O3", tip: "yanma", sicaklik: 150, renk: "#b43c1e", aciklama: "Paslanma!"},
+    "Cu+S": {urun: "CuSO4", tip: "yanma", sicaklik: 80, renk: "#0064c8", aciklama: "Bakir sulfat!"},
+    "Ca+CO2": {urun: "CaCO3", tip: "cokelme", sicaklik: 30, renk: "#f0f0f0", aciklama: "Cokelti olustu!"},
+    "H+Cl": {urun: "HCl", tip: "birlesme", sicaklik: 40, renk: "#ffc8c8", aciklama: "Asit olusumu!"},
+    "Na+OH": {urun: "NaOH", tip: "birlesme", sicaklik: 60, renk: "#c8c8ff", aciklama: "Baz olusumu!"},
+    "Mg+O": {urun: "MgO", tip: "patlama", sicaklik: 300, renk: "#ffffff", aciklama: "Parlak patlama!"},
+    "Al+O": {urun: "Al2O3", tip: "yanma", sicaklik: 250, renk: "#f0f0f0", aciklama: "Aluminyum oksit!"},
+    "Zn+Cl": {urun: "ZnCl2", tip: "birlesme", sicaklik: 70, renk: "#ffffff", aciklama: "Cinko klorur!"},
+    "Ag+NO3": {urun: "AgNO3", tip: "birlesme", sicaklik: 50, renk: "#dcdcf0", aciklama: "Gumus nitrat!"},
+    "K+MnO4": {urun: "KMnO4", tip: "birlesme", sicaklik: 60, renk: "#960096", aciklama: "Mor cozelti!"},
+    "Ba+Cl": {urun: "BaCl2", tip: "birlesme", sicaklik: 45, renk: "#f0f0ff", aciklama: "Baryum klorur!"},
+    "H2O+NaCl": {urun: "cozelti", tip: "cozunme", sicaklik: 25, renk: "#c8dcff", aciklama: "Tuz cozeltisi!"},
+    "HCl+NaOH": {urun: "H2O", tip: "notralizasyon", sicaklik: 80, renk: "#0096ff", aciklama: "Notralizasyon!"},
+    "CuSO4+Fe": {urun: "FeSO4", tip: "tek_degisim", sicaklik: 40, renk: "#649664", aciklama: "Demir bakiri degistirdi!"},
+    "AgNO3+NaCl": {urun: "AgCl", tip: "cokelme", sicaklik: 30, renk: "#ffffff", aciklama: "Beyaz cokelti!"},
+    "BaCl2+H2SO4": {urun: "BaSO4", tip: "cokelme", sicaklik: 35, renk: "#ffffff", aciklama: "Baryum sulfat!"},
+    "Mg+HCl": {urun: "H2", tip: "gaz_cikisi", sicaklik: 60, renk: "#ffffff", aciklama: "Hidrojen gazi!"},
+    "CaCO3+HCl": {urun: "CO2", tip: "gaz_cikisi", sicaklik: 50, renk: "#c8c8c8", aciklama: "Karbondioksit!"},
+    "Na+H2O": {urun: "NaOH", tip: "patlama", sicaklik: 200, renk: "#c8c8ff", aciklama: "SIDDETLI REAKSIYON!"},
+    "K+H2O": {urun: "KOH", tip: "patlama", sicaklik: 250, renk: "#c8c8ff", aciklama: "PATLAMA!"},
+    "C2H5OH+O": {urun: "CO2", tip: "yanma", sicaklik: 300, renk: "#ff9600", aciklama: "Alkol yanmasi!"},
+    "CH4+O": {urun: "CO2", tip: "yanma", sicaklik: 350, renk: "#ff6400", aciklama: "Metan yanmasi!"},
+    "H2O2+MnO2": {urun: "O2", tip: "gaz_cikisi", sicaklik: 40, renk: "#ffffff", aciklama: "Oksijen gazi!"},
+    "NH3+HCl": {urun: "NH4Cl", tip: "duman", sicaklik: 30, renk: "#ffffff", aciklama: "Beyaz duman!"},
+};
+
+const RENK_SECENEKLERI = [
+    "#00ffc8", "#ff6b6b", "#4ecdc4", "#45b7d1", "#96ceb4",
+    "#ffeaa7", "#dfe6e9", "#fd79a8", "#a29bfe", "#00b894",
+    "#e17055", "#74b9ff", "#55efc4", "#ff7675", "#fab1a0"
+];
+
+let simulasyon;
+
+class KimyaSimulasyon {
+    constructor() {
+        this.canvas = document.getElementById('beher-canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.parcaciklar = [];
+        this.efektler = [];
+        this.bubles = [];
+        this.sicaklik = 25.0;
+        this.ph = 7.0;
+        this.hacim = 0.0;
+        this.miktar = 10;
+        this.alevAktif = false;
+        this.titresim = 0;
+        this.siviSeviye = 0;
+        this.siviRenk = {r: 0, g: 180, b: 150};
+        this.siviRenkHedef = {r: 0, g: 180, b: 150};
+        this.tarihce = [];
+        this.aktifElement = "";
+        this.aktifBilesik = "";
+        this.ozellestirme = {
+            beherRenk: "#00ffc8",
+            siviRenk: {r: 0, g: 180, b: 150},
+            arkaPlan: "#0f0f14",
+            parlaklik: 1.0
+        };
+        this.beherX = 100;
+        this.beherY = 80;
+        this.beherW = 300;
+        this.beherH = 400;
+        this.animasyonId = null;
+        this.sonZaman = 0;
+        this.init();
+    }
+    
+    init() {
+        this.butonlariOlustur();
+        this.renkSeciciOlustur();
+        this.tarihceEkle("BEAKER baslatildi! Element eklemeye baslayin.");
+        this.animasyonDongusu(0);
+    }
+    
+    butonlariOlustur() {
+        const elementGrid = document.getElementById('elementler-grid');
+        for (const [sembol, bilgi] of Object.entries(ELEMENTLER)) {
+            const btn = document.createElement('div');
+            btn.className = 'buton element';
+            btn.innerHTML = '<div>' + sembol + '</div><div style="font-size:0.7em;color:#888">' + bilgi.ad + '</div><div class="renk-gosterge" style="background:' + bilgi.renk + '"></div>';
+            btn.onclick = () => this.elementEkle(sembol);
+            elementGrid.appendChild(btn);
+        }
+        
+        const bilesikGrid = document.getElementById('bilesikler-grid');
+        for (const [formul, bilgi] of Object.entries(BILESIKLER)) {
+            const btn = document.createElement('div');
+            btn.className = 'buton bilesik';
+            btn.innerHTML = '<div>' + formul + '</div><div style="font-size:0.7em;color:#888">' + bilgi.ad + '</div><div class="renk-gosterge" style="background:' + bilgi.renk + '"></div>';
+            btn.onclick = () => this.bilesikEkle(formul);
+            bilesikGrid.appendChild(btn);
+        }
+        
+        const aksiyonGrid = document.getElementById('aksiyonlar-grid');
+        const aksiyonlar = [
+            {metin: "Ates", veri: "ates", aciklama: "Isitma baslat/durdur"},
+            {metin: "Salla", veri: "salla", aciklama: "Beheri salla"},
+            {metin: "Bosalt", veri: "bosalt", aciklama: "Beheri temizle"},
+            {metin: "Sogut", veri: "sogut", aciklama: "Sogutma uygula"},
+            {metin: "pH Test", veri: "ph_test", aciklama: "pH olcumu"},
+            {metin: "Filtre", veri: "filtre", aciklama: "Katilari ayir"},
+            {metin: "Karistir", veri: "karistir", aciklama: "Karistir"},
+            {metin: "Buyut", veri: "buyut", aciklama: "Parcaciklari buyut"},
+        ];
+        for (const a of aksiyonlar) {
+            const btn = document.createElement('div');
+            btn.className = 'buton aksiyon';
+            btn.innerHTML = '<div>' + a.metin + '</div><div style="font-size:0.7em;color:#888">' + a.aciklama + '</div>';
+            btn.onclick = () => this.aksiyonUygula(a.veri);
+            aksiyonGrid.appendChild(btn);
+        }
+    }
+    
+    renkSeciciOlustur() {
+        const secici = document.getElementById('renk-secici');
+        RENK_SECENEKLERI.forEach((renk, i) => {
+            const kutu = document.createElement('div');
+            kutu.className = 'renk-kutu' + (i === 0 ? ' secili' : '');
+            kutu.style.background = renk;
+            kutu.onclick = () => {
+                document.querySelectorAll('.renk-kutu').forEach(k => k.classList.remove('secili'));
+                kutu.classList.add('secili');
+                this.ozellestirme.beherRenk = renk;
+            };
+            secici.appendChild(kutu);
+        });
+    }
+    
+    renkParse(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return {r, g, b};
+    }
+    
+    elementEkle(sembol) {
+        const bilgi = ELEMENTLER[sembol];
+        if (!bilgi) return;
+        
+        this.aktifElement = sembol;
+        this.aktifBilesik = "";
+        
+        for (let i = 0; i < this.miktar; i++) {
+            this.parcaciklar.push({
+                x: this.beherX + 30 + Math.random() * (this.beherW - 60),
+                y: this.beherY + 50 + Math.random() * 50,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 2,
+                element: sembol,
+                bilesik: "",
+                miktar: 1,
+                sicaklik: 25,
+                renk: this.renkParse(bilgi.renk),
+                tip: bilgi.tip,
+                yaricap: 5 + Math.random() * 8,
+                yasam: 100,
+                parilti: 0
+            });
+        }
+        
+        this.hacim += this.miktar * 0.5;
+        this.tarihceEkle(bilgi.ad + " (" + sembol + ") eklendi: " + this.miktar + " birim");
+        this.titresim = 5;
+        this.bilgiGuncelle(sembol, bilgi, "element");
+    }
+    
+    bilesikEkle(formul) {
+        const bilgi = BILESIKLER[formul];
+        if (!bilgi) return;
+        
+        this.aktifBilesik = formul;
+        this.aktifElement = "";
+        
+        for (let i = 0; i < this.miktar; i++) {
+            this.parcaciklar.push({
+                x: this.beherX + 30 + Math.random() * (this.beherW - 60),
+                y: this.beherY + 50 + Math.random() * 50,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 2,
+                element: "",
+                bilesik: formul,
+                miktar: 1,
+                sicaklik: 25,
+                renk: this.renkParse(bilgi.renk),
+                tip: bilgi.tip,
+                yaricap: 5 + Math.random() * 8,
+                yasam: 100,
+                parilti: 0
+            });
+        }
+        
+        this.hacim += this.miktar * 0.5;
+        this.ph = (this.ph + bilgi.ph) / 2;
+        this.tarihceEkle(bilgi.ad + " (" + formul + ") eklendi: " + this.miktar + " birim");
+        this.titresim = 5;
+        this.bilgiGuncelle(formul, bilgi, "bilesik");
+    }
+    
+    aksiyonUygula(aksiyon) {
+        switch(aksiyon) {
+            case 'ates': this.atesAktif(); break;
+            case 'salla': this.salla(); break;
+            case 'bosalt': this.bosalt(); break;
+            case 'sogut': this.sogut(); break;
+            case 'ph_test': this.phTest(); break;
+            case 'filtre': this.filtre(); break;
+            case 'karistir': this.karistir(); break;
+            case 'buyut': this.buyut(); break;
+        }
+    }
+    
+    atesAktif() {
+        this.alevAktif = !this.alevAktif;
+        if (this.alevAktif) {
+            this.sicaklik += 50;
+            for (let i = 0; i < 30; i++) {
+                this.efektler.push({
+                    x: this.beherX + Math.random() * this.beherW,
+                    y: this.beherY + this.beherH - 20,
+                    tip: 'alev',
+                    yasam: 100,
+                    boyut: 5 + Math.random() * 10,
+                    renk: Math.random() > 0.5 ? '#ff6400' : '#ffc800',
+                    hiz: 2 + Math.random() * 4,
+                    aci: -Math.PI / 2 + (Math.random() - 0.5) * 0.5
+                });
+            }
+            this.tarihceEkle("Ates yakildi!");
+        } else {
+            this.tarihceEkle("Ates sonduruldu");
+        }
+    }
+    
+    salla() {
+        this.titresim = 20;
+        this.parcaciklar.forEach(p => {
+            p.vx += (Math.random() - 0.5) * 20;
+            p.vy += (Math.random() - 0.5) * 20;
+        });
+        for (let i = 0; i < 15; i++) {
+            this.bubles.push({
+                x: this.beherX + 30 + Math.random() * (this.beherW - 60),
+                y: this.beherY + this.beherH - 50,
+                yaricap: 2 + Math.random() * 6,
+                hiz: 2 + Math.random() * 5,
+                yasam: 100
+            });
+        }
+        this.tarihceEkle("Beher sallandi!");
+    }
+    
+    bosalt() {
+        this.parcaciklar = [];
+        this.efektler = [];
+        this.bubles = [];
+        this.hacim = 0;
+        this.sicaklik = 25;
+        this.ph = 7;
+        this.siviRenk = {r: 0, g: 180, b: 150};
+        this.siviRenkHedef = {r: 0, g: 180, b: 150};
+        this.tarihceEkle("Beher bosaltildi");
+        this.titresim = 10;
+    }
+    
+    sogut() {
+        this.sicaklik = Math.max(25, this.sicaklik - 50);
+        this.parcaciklar.forEach(p => {
+            p.sicaklik = Math.max(25, p.sicaklik - 30);
+            p.vx *= 0.5;
+            p.vy *= 0.5;
+        });
+        for (let i = 0; i < 15; i++) {
+            this.efektler.push({
+                x: this.beherX + Math.random() * this.beherW,
+                y: this.beherY + this.beherH - 20,
+                tip: 'buhar',
+                yasam: 100,
+                boyut: 5 + Math.random() * 10,
+                renk: 'rgba(200,200,220,0.3)',
+                hiz: 1 + Math.random() * 2,
+                aci: -Math.PI / 2
+            });
+        }
+        this.tarihceEkle("Sogutma uygulandi");
+    }
+    
+    phTest() {
+        let renk, durum;
+        if (this.ph < 6) { renk = '#ff3232'; durum = 'Asidik'; }
+        else if (this.ph > 8) { renk = '#3232ff'; durum = 'Bazik'; }
+        else { renk = '#00ff64'; durum = 'Notr'; }
+        
+        for (let i = 0; i < 20; i++) {
+            this.efektler.push({
+                x: this.beherX + 30 + Math.random() * (this.beherW - 60),
+                y: this.beherY + 50 + Math.random() * 150,
+                tip: 'kivilcim',
+                yasam: 100,
+                boyut: 3,
+                renk: renk,
+                hiz: 2 + Math.random() * 5,
+                aci: Math.random() * Math.PI * 2
+            });
+        }
+        this.tarihceEkle("pH Test: " + this.ph.toFixed(1) + " - " + durum);
+    }
+    
+    filtre() {
+        const once = this.parcaciklar.length;
+        this.parcaciklar = this.parcaciklar.filter(p => p.tip !== 'katı');
+        const filtrelenen = once - this.parcaciklar.length;
+        for (let i = 0; i < filtrelenen; i++) {
+            this.efektler.push({
+                x: this.beherX + this.beherW + 20,
+                y: this.beherY + 100 + Math.random() * 200,
+                tip: 'duman',
+                yasam: 100,
+                boyut: 5 + Math.random() * 10,
+                renk: 'rgba(150,150,150,0.5)',
+                hiz: 1 + Math.random() * 2,
+                aci: -Math.PI / 2
+            });
+        }
+        this.tarihceEkle("Filtreleme: " + filtrelenen + " kati parcacik ayrildi");
+    }
+    
+    karistir() {
+        this.parcaciklar.forEach(p => {
+            p.vx += (Math.random() - 0.5) * 10;
+            p.vy += (Math.random() - 0.5) * 10;
+        });
+        for (let i = 0; i < 15; i++) {
+            this.bubles.push({
+                x: this.beherX + 30 + Math.random() * (this.beherW - 60),
+                y: this.beherY + this.beherH - 30,
+                yaricap: 2 + Math.random() * 5,
+                hiz: 2 + Math.random() * 4,
+                yasam: 100
+            });
+        }
+        this.tarihceEkle("Karistirma uygulandi");
+    }
+    
+    buyut() {
+        this.parcaciklar.forEach(p => {
+            p.yaricap = Math.min(20, p.yaricap * 1.5);
+        });
+        this.tarihceEkle("Parcaciklar buyutuldu");
+    }
+    
+    reaksiyonKontrol() {
+        for (let i = 0; i < this.parcaciklar.length; i++) {
+            for (let j = i + 1; j < this.parcaciklar.length; j++) {
+                const p1 = this.parcaciklar[i];
+                const p2 = this.parcaciklar[j];
+                const mesafe = Math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2);
+                
+                if (mesafe < 20) {
+                    const key1 = p1.element || p1.bilesik;
+                    const key2 = p2.element || p2.bilesik;
+                    const anahtar = [key1, key2].sort().join('+');
+                    
+                    if (REAKSIYONLAR[anahtar]) {
+                        this.reaksiyonUygula(p1, p2, REAKSIYONLAR[anahtar]);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    
+    reaksiyonUygula(p1, p2, reaksiyon) {
+        const ortaX = (p1.x + p2.x) / 2;
+        const ortaY = (p1.y + p2.y) / 2;
+        
+        if (reaksiyon.tip === 'patlama') {
+            for (let i = 0; i < 20; i++) {
+                this.efektler.push({
+                    x: ortaX, y: ortaY,
+                    tip: 'kivilcim', yasam: 100, boyut: 3,
+                    renk: reaksiyon.renk,
+                    hiz: 3 + Math.random() * 8,
+                    aci: Math.random() * Math.PI * 2
+                });
+            }
+            this.titresim = 15;
+            this.sicaklik += reaksiyon.sicaklik;
+        } else if (reaksiyon.tip === 'yanma') {
+            for (let i = 0; i < 15; i++) {
+                this.efektler.push({
+                    x: ortaX + (Math.random() - 0.5) * 20,
+                    y: ortaY + (Math.random() - 0.5) * 20,
+                    tip: 'alev', yasam: 100, boyut: 5 + Math.random() * 10,
+                    renk: Math.random() > 0.5 ? '#ff6400' : '#ffc800',
+                    hiz: 2 + Math.random() * 5,
+                    aci: -Math.PI / 2
+                });
+            }
+            this.sicaklik += reaksiyon.sicaklik;
+            this.titresim = 8;
+        } else if (reaksiyon.tip === 'gaz_cikisi') {
+            for (let i = 0; i < 10; i++) {
+                this.bubles.push({
+                    x: ortaX + (Math.random() - 0.5) * 20,
+                    y: ortaY,
+                    yaricap: 2 + Math.random() * 6,
+                    hiz: 2 + Math.random() * 4,
+                    yasam: 100
+                });
+            }
+            this.titresim = 3;
+        } else if (reaksiyon.tip === 'cokelme') {
+            for (let i = 0; i < 10; i++) {
+                this.efektler.push({
+                    x: ortaX + (Math.random() - 0.5) * 30,
+                    y: ortaY + (Math.random() - 0.5) * 30,
+                    tip: 'duman', yasam: 100, boyut: 5 + Math.random() * 10,
+                    renk: 'rgba(240,240,240,0.6)',
+                    hiz: 1 + Math.random() * 3,
+                    aci: -Math.PI / 2
+                });
+            }
+            this.titresim = 5;
+        } else if (reaksiyon.tip === 'duman') {
+            for (let i = 0; i < 15; i++) {
+                this.efektler.push({
+                    x: ortaX + (Math.random() - 0.5) * 20,
+                    y: ortaY,
+                    tip: 'duman', yasam: 100, boyut: 5 + Math.random() * 15,
+                    renk: 'rgba(255,255,255,0.5)',
+                    hiz: 1 + Math.random() * 2,
+                    aci: -Math.PI / 2
+                });
+            }
+        }
+        
+        p1.bilesik = reaksiyon.urun;
+        p1.element = '';
+        p1.renk = this.renkParse(reaksiyon.renk);
+        p1.sicaklik = reaksiyon.sicaklik;
+        p1.parilti = 50;
+        
+        if (BILESIKLER[reaksiyon.urun]) {
+            this.ph = (this.ph + BILESIKLER[reaksiyon.urun].ph) / 2;
+        }
+        
+        this.tarihceEkle(reaksiyon.aciklama);
+    }
+    
+    guncelle(dt) {
+        if (this.titresim > 0) this.titresim -= dt * 2;
+        if (!this.alevAktif && this.sicaklik > 25) this.sicaklik -= 0.5 * dt;
+        
+        this.siviRenk.r += (this.siviRenkHedef.r - this.siviRenk.r) * 0.05;
+        this.siviRenk.g += (this.siviRenkHedef.g - this.siviRenk.g) * 0.05;
+        this.siviRenk.b += (this.siviRenkHedef.b - this.siviRenk.b) * 0.05;
+        
+        this.parcaciklar.forEach(p => {
+            if (p.tip === 'katı' || p.tip === 'sıvı') p.vy += 0.5 * dt;
+            else {
+                p.vy += 0.1 * dt;
+                p.vx += (Math.random() - 0.5) * 0.4;
+                p.vy += (Math.random() - 0.5) * 0.4;
+            }
+            
+            p.x += p.vx * dt * 60;
+            p.y += p.vy * dt * 60;
+            
+            if (p.x < this.beherX + 15) { p.x = this.beherX + 15; p.vx *= -0.5; }
+            if (p.x > this.beherX + this.beherW - 15) { p.x = this.beherX + this.beherW - 15; p.vx *= -0.5; }
+            if (p.y > this.beherY + this.beherH - 15) { p.y = this.beherY + this.beherH - 15; p.vy *= -0.3; }
+            if (p.y < this.beherY + 50) { p.y = this.beherY + 50; p.vy *= -0.5; }
+            
+            if (p.sicaklik > 100) p.vy -= 0.1 * (p.sicaklik - 100) / 100;
+            if (p.parilti > 0) p.parilti -= 0.5 * dt;
+            
+            const siviYuzey = this.beherY + this.beherH - 50 - this.siviSeviye;
+            if (p.y > siviYuzey && p.tip === 'sıvı') {
+                p.vy *= 0.3;
+                p.vx *= 0.95;
+            }
+        });
+        
+        this.efektler = this.efektler.filter(e => e.yasam > 0);
+        this.efektler.forEach(e => {
+            e.yasam -= e.hiz * dt * 10;
+            e.boyut += 0.2 * dt * 60;
+            if (e.tip === 'alev') e.y -= e.hiz * dt * 60;
+            else if (e.tip === 'buhar') { e.y -= e.hiz * 0.5 * dt * 60; e.x += (Math.random() - 0.5) * 0.5; }
+            else if (e.tip === 'kivilcim') {
+                e.x += Math.cos(e.aci) * e.hiz * dt * 60;
+                e.y += Math.sin(e.aci) * e.hiz * dt * 60;
+            } else if (e.tip === 'duman') {
+                e.y -= e.hiz * 0.3 * dt * 60;
+                e.x += (Math.random() - 0.5) * 2;
+                e.boyut += 0.5 * dt * 60;
+            }
+        });
+        
+        this.bubles = this.bubles.filter(b => b.yasam > 0);
+        this.bubles.forEach(b => {
+            b.y -= b.hiz * dt * 60;
+            b.x += (Math.random() - 0.5) * 0.3;
+            b.yasam -= 0.5 * dt * 60;
+        });
+        
+        this.reaksiyonKontrol();
+        
+        const hedefSeviye = Math.min(this.beherH - 50, this.hacim * 2);
+        this.siviSeviye += (hedefSeviye - this.siviSeviye) * 0.1 * dt * 60;
+        
+        if (this.alevAktif) {
+            if (Math.random() < 0.3) {
+                this.efektler.push({
+                    x: this.beherX + Math.random() * this.beherW,
+                    y: this.beherY + this.beherH - 20,
+                    tip: 'alev', yasam: 100, boyut: 5 + Math.random() * 10,
+                    renk: Math.random() > 0.5 ? '#ff6400' : '#ffc800',
+                    hiz: 2 + Math.random() * 5,
+                    aci: -Math.PI / 2
+                });
+            }
+            this.sicaklik = Math.min(500, this.sicaklik + 0.5);
+        }
+        
+        document.getElementById('sicaklik-deger').textContent = this.sicaklik.toFixed(1) + 'C';
+        document.getElementById('ph-deger').textContent = this.ph.toFixed(1);
+        document.getElementById('hacim-deger').textContent = this.hacim.toFixed(1) + ' ml';
+    }
+    
+    ciz() {
+        const ctx = this.ctx;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        
+        ctx.fillStyle = this.ozellestirme.arkaPlan;
+        ctx.fillRect(0, 0, w, h);
+        
+        this.beherCiz(ctx);
+        this.siviCiz(ctx);
+        this.parcaciklar.forEach(p => this.parcacikCiz(ctx, p));
+        this.efektler.forEach(e => this.efektCiz(ctx, e));
+        this.bubles.forEach(b => this.bubleCiz(ctx, b));
+    }
+    
+    beherCiz(ctx) {
+        const offsetX = this.titresim > 0 ? (Math.random() - 0.5) * this.titresim : 0;
+        const offsetY = this.titresim > 0 ? (Math.random() - 0.5) * this.titresim : 0;
+        const bx = this.beherX + offsetX;
+        const by = this.beherY + offsetY;
+        const bw = this.beherW;
+        const bh = this.beherH;
+        
+        ctx.beginPath();
+        ctx.moveTo(bx + 30, by);
+        ctx.lineTo(bx + bw - 30, by);
+        ctx.lineTo(bx + bw, by + 50);
+        ctx.lineTo(bx + bw, by + bh - 50);
+        ctx.lineTo(bx + bw - 20, by + bh);
+        ctx.lineTo(bx + 20, by + bh);
+        ctx.lineTo(bx, by + bh - 50);
+        ctx.lineTo(bx, by + 50);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(20, 30, 35, 0.8)';
+        ctx.fill();
+        ctx.strokeStyle = this.ozellestirme.beherRenk;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        for (let i = 1; i < 10; i++) {
+            const y = by + bh - 50 - i * 35;
+            if (y > by + 50) {
+                const uzunluk = i % 2 === 0 ? 20 : 10;
+                ctx.beginPath();
+                ctx.moveTo(bx + 5, y);
+                ctx.lineTo(bx + 5 + uzunluk, y);
+                ctx.strokeStyle = this.ozellestirme.beherRenk;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                if (i % 2 === 0) {
+                    ctx.fillStyle = '#f0f0f0';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(i * 10 + 'ml', bx + 30, y + 4);
+                }
+            }
+        }
+        
+        ctx.beginPath();
+        ctx.moveTo(bx + bw - 30, by);
+        ctx.lineTo(bx + bw + 20, by - 20);
+        ctx.lineTo(bx + bw + 30, by - 15);
+        ctx.strokeStyle = this.ozellestirme.beherRenk;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+    
+    siviCiz(ctx) {
+        if (this.siviSeviye < 5) return;
+        
+        const bx = this.beherX;
+        const by = this.beherY + this.beherH - 50 - this.siviSeviye;
+        const bw = this.beherW;
+        const dalga = Math.sin(Date.now() * 0.003) * 3;
+        
+        let r = this.siviRenk.r, g = this.siviRenk.g, b = this.siviRenk.b;
+        if (this.sicaklik > 100) {
+            const f = Math.min(1, (this.sicaklik - 100) / 400);
+            r = Math.floor(r + (255 - r) * f);
+            g = Math.floor(g + (100 - g) * f);
+            b = Math.floor(b + (50 - b) * f);
+        }
+        
+        ctx.beginPath();
+        ctx.moveTo(bx + 5, by + this.siviSeviye);
+        ctx.lineTo(bx + 5, by + 10);
+        ctx.quadraticCurveTo(bx + 30, by - 5 + dalga, bx + bw / 2, by - 5 + dalga);
+        ctx.quadraticCurveTo(bx + bw - 30, by - 5 + dalga, bx + bw - 5, by + 10);
+        ctx.lineTo(bx + bw - 5, by + this.siviSeviye);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',0.7)';
+        ctx.fill();
+        
+        ctx.fillStyle = 'rgba(0,255,220,0.15)';
+        ctx.fillRect(bx + 5, by, bw - 10, 20);
+        
+        ctx.beginPath();
+        ctx.moveTo(bx + 30, by - 5 + dalga);
+        ctx.quadraticCurveTo(bx + bw / 2, by - 8 + dalga, bx + bw - 30, by - 5 + dalga);
+        ctx.strokeStyle = 'rgba(0,255,220,0.5)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+    
+    parcacikCiz(ctx, p) {
+        if (p.parilti > 0) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.yaricap + p.parilti * 0.3, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,200,' + (p.parilti / 100) + ')';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.yaricap, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgb(' + p.renk.r + ',' + p.renk.g + ',' + p.renk.b + ')';
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(p.x - p.yaricap * 0.3, p.y - p.yaricap * 0.3, p.yaricap * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fill();
+        
+        if (p.yaricap > 8) {
+            const ad = p.element || p.bilesik;
+            if (ad) {
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(ad, p.x, p.y + 3);
+            }
+        }
+    }
+    
+    efektCiz(ctx, e) {
+        const alpha = Math.max(0, e.yasam / 100);
+        if (e.tip === 'alev') {
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.boyut, 0, Math.PI * 2);
+            ctx.fillStyle = e.renk;
+            ctx.globalAlpha = alpha;
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.boyut * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffff64';
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (e.tip === 'buhar') {
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.boyut, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200,200,220,0.3)';
+            ctx.globalAlpha = alpha * 0.5;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (e.tip === 'kivilcim') {
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = e.renk;
+            ctx.globalAlpha = alpha;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (e.tip === 'duman') {
+            ctx.beginPath();
+            ctx.arc(e.x, e.y, e.boyut, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200,200,200,0.3)';
+            ctx.globalAlpha = alpha * 0.3;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+    
+    bubleCiz(ctx, b) {
+        const alpha = Math.max(0, b.yasam / 100);
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.yaricap, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,' + (alpha * 0.8) + ')';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(b.x - b.yaricap * 0.3, b.y - b.yaricap * 0.3, b.yaricap * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,' + (alpha * 0.4) + ')';
+        ctx.fill();
+    }
+    
+    animasyonDongusu(zaman) {
+        const dt = Math.min((zaman - this.sonZaman) / 1000, 0.05);
+        this.sonZaman = zaman;
+        
+        this.guncelle(dt);
+        this.ciz();
+        
+        this.animasyonId = requestAnimationFrame((t) => this.animasyonDongusu(t));
+    }
+    
+    tarihceEkle(mesaj) {
+        this.tarihce.push(mesaj);
+        if (this.tarihce.length > 50) this.tarihce.shift();
+        
+        const liste = document.getElementById('tarihce-liste');
+        const item = document.createElement('div');
+        item.className = 'tarihce-item yeni';
+        item.textContent = mesaj;
+        liste.appendChild(item);
+        liste.scrollTop = liste.scrollHeight;
+        
+        setTimeout(() => item.classList.remove('yeni'), 1000);
+        
+        while (liste.children.length > 50) {
+            liste.removeChild(liste.firstChild);
+        }
+    }
+    
+    bilgiGuncelle(id, bilgi, tip) {
+        const icerik = document.getElementById('aktif-bilgi-icerik');
+        if (tip === 'element') {
+            icerik.innerHTML = 
+                '<div class="bilgi-satir"><span>Ad:</span><span>' + bilgi.ad + '</span></div>' +
+                '<div class="bilgi-satir"><span>Sembol:</span><span>' + id + '</span></div>' +
+                '<div class="bilgi-satir"><span>Tip:</span><span>' + bilgi.tip + '</span></div>' +
+                '<div class="bilgi-satir"><span>Atom No:</span><span>' + bilgi.atomNo + '</span></div>' +
+                '<div class="bilgi-satir"><span>Yoğunluk:</span><span>' + bilgi.yogunluk + ' g/cm³</span></div>' +
+                '<div style="margin-top:5px;color:#888;font-size:0.9em">' + bilgi.aciklama + '</div>';
+        } else {
+            icerik.innerHTML = 
+                '<div class="bilgi-satir"><span>Ad:</span><span>' + bilgi.ad + '</span></div>' +
+                '<div class="bilgi-satir"><span>Formul:</span><span>' + bilgi.formul + '</span></div>' +
+                '<div class="bilgi-satir"><span>Tip:</span><span>' + bilgi.tip + '</span></div>' +
+                '<div class="bilgi-satir"><span>pH:</span><span>' + bilgi.ph + '</span></div>' +
+                '<div style="margin-top:5px;color:#888
